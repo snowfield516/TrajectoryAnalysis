@@ -1,0 +1,26 @@
+# 忽略所有 .pyc 文件
+*.pyc
+
+# 忽略所有在 .idea 目录中的文件（通常用于PyCharm项目设置）
+.idea/
+
+# 忽略 venv 目录
+venv/
+
+# 忽略 result 目录
+result/
+
+# 忽略 data 目录
+data/
+
+# 忽略 GraphData 目录
+GraphData/
+
+# 忽略 tests 目录
+tests/
+
+# 忽略 tests 目录
+result/
+
+# 忽略特定的文件
+config.yaml

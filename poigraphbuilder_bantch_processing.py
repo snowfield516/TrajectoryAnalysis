@@ -20,8 +20,8 @@ class POIGraphBuilder:
         self.conn.install_extension("spatial")
         self.conn.load_extension("spatial")
 
-    def convert_poi_to_graph(self,user_id):
-        query_locations = f"SELECT id, fulltime, poi_id, ST_AsText(poigeom), descriptiontext,groupid FROM breadcrumbs_test.main.user_{user_id}_joinpoi_200m_new_distinct"
+    def convert_poi_to_graph(self,user_id,distance=120):
+        query_locations = f"SELECT id, fulltime, poi_id, ST_AsText(poigeom), descriptiontext,groupid FROM breadcrumbs_test.main.user_{user_id}_joinpoi_{distance}m_new_distinct"
         user_location = self.conn.execute(query_locations).fetchall()
         # 初始化一个有向图来存储POI图数据结构
         self.G = nx.MultiDiGraph()
@@ -63,8 +63,8 @@ class POIGraphBuilder:
         #shortest_path = nx.shortest_path(self.G, source=120, target=3)
         #logging.info("The shortest path between start and end nodes are : %s ", shortest_path)
 
-    def convert_poi_to_graph_new(self, user_id):
-        query_locations = f"SELECT id, fulltime, poi_id, ST_AsText(poigeom), descriptiontext, groupid FROM breadcrumbs_test.main.user_{user_id}_joinpoi_200m_new_distinct"
+    def convert_poi_to_graph_new(self, user_id,distance=120):
+        query_locations = f"SELECT id, fulltime, poi_id, ST_AsText(poigeom), descriptiontext, groupid FROM breadcrumbs_test.main.user_{user_id}_joinpoi_{distance}m_new_distinct"
         user_location = self.conn.execute(query_locations).fetchall()
         self.G = nx.MultiDiGraph()
         last_visited_poi_id = None
@@ -283,13 +283,13 @@ class POIGraphBuilder:
     def create_user_poi_table(self, user_id):
         query = f"""
         CREATE TABLE poi_{user_id} AS (
-            SELECT * FROM poi_projected WHERE user_id = {user_id}
+            SELECT * FROM poi_clustered WHERE user_id = {user_id}
         );
         """
         self.conn.execute(query)
 
     ### fourth step get the location with the poi data:
-    def generate_user_poi_join_table(self, user_id, distance=200):
+    def generate_user_poi_join_table(self, user_id, distance=120):
         query = f"""
         CREATE TABLE user_{user_id}_joinpoi_{distance}m AS (
         WITH UserPOIDistances AS (
@@ -300,7 +300,7 @@ class POIGraphBuilder:
             a.minute,
             a.fulltime,
             a.geom as locationgeom,
-            b.id AS poi_id,
+            b.cluster_id AS poi_id,
             b.geom as poigeom,
             b.descript_2 as descriptiontext,
             ST_Distance(locationgeom, poigeom) AS poidistance,
@@ -333,7 +333,7 @@ class POIGraphBuilder:
         self.conn.execute(query)
 
     ###third step get the location with the poi data:
-    def generate_user_poi_join_table_distinct(self, user_id, distance=200):
+    def generate_user_poi_join_table_distinct(self, user_id, distance=120):
         query = f"""
         create table user_{user_id}_joinpoi_{distance}m_new_distinct as (
         WITH ValueChanges AS (
@@ -399,10 +399,21 @@ class POIGraphBuilder:
 
         return user_ids
 
+    def drop_all_tables(self):
+        query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND  table_name not in ('location_projected','poi_projected','poi_clustered'); "
+
+        tables_df = self.conn.execute(query).fetchdf()
+        # 逐个删除表
+        for table_name in tables_df['table_name']:
+            drop_table_query = f"DROP TABLE IF EXISTS {table_name}"
+            self.conn.execute(drop_table_query)
+
+
 
 if __name__ == '__main__':
     model = POIGraphBuilder()
-
+    #清空除了'location_projected','poi_projected','poi_clustered'的其他的表
+    # model.drop_all_tables()
     #Stage1：处理每个User的location信息，构造Graph数据
     #80个数据处理2分钟。
 
