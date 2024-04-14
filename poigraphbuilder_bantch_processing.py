@@ -63,7 +63,7 @@ class POIGraphBuilder:
         #shortest_path = nx.shortest_path(self.G, source=120, target=3)
         #logging.info("The shortest path between start and end nodes are : %s ", shortest_path)
 
-    def convert_poi_to_graph_new(self, user_id,distance=120):
+    def convert_poi_to_graph_new(self, user_id, distance=120):
         query_locations = f"SELECT id, fulltime, poi_id, ST_AsText(poigeom), descriptiontext, groupid FROM breadcrumbs_test.main.user_{user_id}_joinpoi_{distance}m_new_distinct"
         user_location = self.conn.execute(query_locations).fetchall()
         self.G = nx.MultiDiGraph()
@@ -412,20 +412,22 @@ class POIGraphBuilder:
 
 if __name__ == '__main__':
     model = POIGraphBuilder()
+    #Stage 0，清空所有的数据表，除了基础表
     #清空除了'location_projected','poi_projected','poi_clustered'的其他的表
-    # model.drop_all_tables()
+    #model.drop_all_tables()
+
     #Stage1：处理每个User的location信息，构造Graph数据
     #80个数据处理2分钟。
 
-    # user_ids = model.get_all_users()
-    # for user_id in user_ids:
-    #     ##Assuming these methods are defined to handle a single user_id
-    #     model.create_user_minute_table(user_id)
-    #     model.create_user_20_timewindow_table(user_id)
-    #     model.create_user_poi_table(user_id)
-    #     model.generate_user_poi_join_table(user_id)
-    #     model.generate_user_poi_join_table_distinct(user_id)
-    #     model.convert_poi_to_graph_new(user_id)
+    user_ids = model.get_all_users()
+    for user_id in user_ids:
+        ##Assuming these methods are defined to handle a single user_id
+        model.create_user_minute_table(user_id)
+        model.create_user_20_timewindow_table(user_id)
+        model.create_user_poi_table(user_id)
+        model.generate_user_poi_join_table(user_id)
+        model.generate_user_poi_join_table_distinct(user_id)
+        model.convert_poi_to_graph_new(user_id)
 
     #Stage2：读取每个User的Graph数据，并合并成为一个大的Graph
     user_ids = model.get_all_users()
